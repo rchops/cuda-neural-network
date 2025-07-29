@@ -15,21 +15,22 @@
 __global__ void linear_layer_and_activation(float *weight_mat, float *biases, float *x_inputs, float *z_val,
                                             float *activation_val, int num_output_neurons, int num_input_neurons){
     int idx = blockIdx.x * blockDim.x + threadIdx.x ;
-
-    // calculate weighted sum for each neuron
-    // w * x
-    // same rule as multiplying matrices -> weighted_mat[row * num_col + col] * x_input[i] (x_input is vector)
-    for(int i = 0; i < num_input_neurons; ++i){
-        z_val[idx] += weight_mat[(num_input_neurons) * idx + i] * x_inputs[i]; 
+    if(idx < num_output_neurons){
+         // calculate weighted sum for each neuron
+         // w * x
+         // same rule as multiplying matrices -> weighted_mat[row * num_col + col] * x_input[i] (x_input is vector)
+         for(int i = 0; i < num_input_neurons; ++i){
+             z_val[idx] += weight_mat[(num_input_neurons) * idx + i] * x_inputs[i]; 
+         }
+     
+         // w * x + b
+         // gives final set values
+         z_val[idx] += biases[idx];
+     
+         // activation function
+         // sig(w * x + b)
+         activation_val[idx] = 1.0 / (1.0 + exp(-z_val[idx]));
     }
-
-    // w * x + b
-    // gives final set values
-    z_val[idx] += biases[idx];
-
-    // activation function
-    // sig(w * x + b)
-    activation_val[idx] = 1.0 / (1.0 + exp(-z_val[idx]));
 }
 
 int main(){
