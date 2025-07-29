@@ -1,5 +1,8 @@
 ## Simple Neural Network Using CUDA
 
+- The neural network grows with each part -> learning how this works too
+- So something new is built on top of last part
+
 ### 1. Activation Layer
 - Use sigmoid function for activation function
     - 1 / (1 + e^(-x))
