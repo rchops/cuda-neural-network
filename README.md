@@ -16,3 +16,9 @@
 - All input neurons connected to each output neuron
 - Set value for each neuron caluclating using weighted sum -> weight * input + bias
 - Then use this to calculation activation values as in Activation Layer
+
+### 3. Multiple Layers
+- Added more hidden layers instead of just one and output
+    - 4 in [8, 6, 4, 1] structure
+- Same calculations but having to do over multiple layers
+- Again using thread for each neuron
