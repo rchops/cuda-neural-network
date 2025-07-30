@@ -1,0 +1,9 @@
+#include <stdlib.h>
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
+#include <math.h>
+#include <stdio.h>
+#include <iostream>
+#include <device_launch_parameters.h>
+#include <string>
+#include <algorithm>
