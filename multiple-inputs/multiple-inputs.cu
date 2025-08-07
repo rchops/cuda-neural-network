@@ -21,8 +21,10 @@ __global__ void multiple_inputs(float *weight_mat, float *biases, float *z_val,
     // define offsets for current layer
     // help index into correct layer
     int layer_offset_weights = 0;
-    int layer_offset_z_b = 0;
-    int layer_offset_activations = 0;
+    int layer_offset_z = 0;
+    int layer_offset_b = 0;
+    int layer_offset_activations_input_layer = 0;
+    int layer_offset_activations_current_layer = shape[0] * blockDim.y;
 
     // for multiple layers use variable to define shape of network -> [8,6,4,1]
     // for each layer we calculate the set values and activation values, so loop through every layer
@@ -52,6 +54,7 @@ __global__ void multiple_inputs(float *weight_mat, float *biases, float *z_val,
              
             // each neuron in the layer requires an input
             int num_input_in_layer = shape[shape_idx];
+            int layer_size = shape[shape_idx + 1];
 
             for(int i = 0; i < num_input_in_layer; ++i){
 
@@ -120,7 +123,8 @@ int main(){
     // first 8 values are inputs (no need for separate input array anymore since we included it in activations)
     // rest are initialised to 0.0
     int num_activation = num_inputs * num_neurons;
-    float *h_activation = new float [num_activation] {0.38f, 0.12f, 1.13f, 1.20f, 0.19f, -0.38f, -0.64f, 0.42f};
+    float *h_activation = new float [num_activation] {0.38f, 0.12f, 1.13f, 1.20f, 0.19f, -0.38f, -0.64f, 0.42f, 0.76f, -0.36f, -0.23f, -0.89f, 
+                                                        -0.01f, -0.08f, -0.26f, -0.13f, -0.55f, -0.42f, -0.39f, -0.83f, 0.87f, 0.44f, -0.45f, -0.52f};
 
     // Initialise z matrix on host
     int num_z = num_biases * num_inputs;
@@ -149,8 +153,13 @@ int main(){
 
     // <<<num_blocks, threads_per_block>>>
     // sets width of neural network (ours is 8)
-    int num_threads = *std::max_element(shape, shape + shape_length);
-    multiple_inputs<<<1, num_threads>>>(d_weights, d_biases, d_z, d_activation, d_shape, shape_length);
+    // finds the largest number of neurons in any layer -> the width
+    // dim3 creates 2D block of threads -> (x,y) -> x = num neurons in layer, y = num of inputs being processed
+    // e.g. num_threads_x_direction = 8, num_inputs = 2, creates 2D block of 16 threads
+    // one thread for each neuron which computes 2 inputs for each neuron
+    int num_threads_x_dimensions = *std::max_element(shape + 1, shape + shape_length);
+    dim3 thread_block_dimensions(num_threads_x_dimensions, num_inputs);
+    multiple_inputs<<<1, thread_block_dimensions>>>(d_weights, d_biases, d_z, d_activation, d_shape, shape_length);
 
     // Back to host
     cudaMemcpy(h_activation, d_activation, size_activation, cudaMemcpyDeviceToHost);
@@ -165,19 +174,28 @@ int main(){
     int z_offset = 0;
     for(int shape_idx = 1; shape_idx < shape_length; ++shape_idx){
         std::cout << "Z values: " << shape_idx << ". hidden layer" << std::endl;
+        
         for(int i = 0; i < shape[shape_idx]; ++i){
-            std::cout << h_z[i + z_offset] << std::endl;
-        }
-        z_offset += shape[shape_idx];
+            std::cout << "[";
+            for(int j = 0; j < num_inputs; ++j){
+                std::cout << h_z[z_offset + j * shape[shape_idx] + i] << ", ";
+            }
+            std::cout << "]" << std::endl;
+        } 
+        z_offset += shape[shape_idx] * num_inputs;
     }
     
     int activation_offset = shape[0]; // skip input values
     for(int shape_idx = 1; shape_idx < shape_length; ++shape_idx){
         std::cout << "Activations: " << shape_idx << ". hidden layer" << std::endl;
         for(int i = 0; i < shape[shape_idx]; ++i){
-            std::cout << h_activation[i + activation_offset] << std::endl;
-        }
-        activation_offset += shape[shape_idx];
+            std::cout << "[";
+            for(int j = 0; j < num_inputs; ++j){
+                std::cout << h_z[activation_offset + j * shape[shape_idx] + i] << ", ";
+            }
+            std::cout << "]" << std::endl;
+        } 
+        activation_offset += shape[shape_idx] * num_inputs;
     }
 
     getchar();
